@@ -95,19 +95,32 @@ class Game {
 
             if (bid_ready) {
                 this.deckShuffle()
-
                 this._status = GAME_STATUS.BID
-                return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id}
+                return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: 0, max: 10}
             }
         } else if(this._status === GAME_STATUS.BID) {
             
             console.log("this.current_booker_ndx:   " + this.current_booker_ndx)
-            
             console.log(this._bids)
-            if (this._bids.some(val => val === null))
-                return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id}
+
+            if (this._bids.some(val => val === null)) {
+                let min = this._bids[(this.current_booker_ndx + 2) % 4]
+                let max = 13 - min > 10 ? 10 : 13 - min
+                min = min === null ? 0 : 4 - min
+                return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: min, max: max}
+            }
             else {
-                this._status = GAME_STATUS.ROUND_START
+
+                // Invalid Bid
+                if(this._bids.reduce( (a, b) => a + b) < 10) {
+                    // shuffle again and restart bidding
+                    this.deckShuffle()
+                    this._bids = [null, null, null, null]
+                    return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: 0, max: 10}
+                } else {
+                    this._status = GAME_STATUS.ROUND_START
+                }
+
             }
         }
         return null

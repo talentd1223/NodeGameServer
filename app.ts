@@ -37,6 +37,7 @@ class App {
         let player: Player = this.findPlayerById(player_id)
 
         game.join(player)
+        return game.run()
     }
 
     leaveGame(game_id: string, player_id: string) {
@@ -44,6 +45,7 @@ class App {
         let player: Player = this.findPlayerById(player_id)
 
         game.leave(player)
+        return game.run()
     }
 
     addPlayer(id: string) {

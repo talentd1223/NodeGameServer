@@ -19,31 +19,58 @@ function handleSubscribe(topic, client, payload = "") {
     topic: topic,
     payload: ""
   }
+  let result = null
   switch(topic) {
     case "games": // get game list
       response.payload = app.getGameList().toString()
       break
     default: // joined game -> get game info and leave lobby
-      app.joinGame(topic, client.id)
-      response.payload = JSON.stringify(app.findGameById(topic))
+      let game = app.findGameById(topic)
 
+      if(game.isDuplicated(client.id))
+        return
+      
+      result = app.joinGame(topic, client.id)
       client.unsubscribe({topic: 'games', qos: 0}, () => {})
-      break      
+      
+      response.payload = JSON.stringify(app.findGameById(topic))
+      break
   }
-
   console.log(response)
   aedes.publish( response as PublishPacket, () => {})
+  handleRunResult(result, topic)
+}
+
+function handleRunResult(result, game_id) {
+  if ( !result ) return
+  let packet: PublishPacket = {topic: game_id, payload: ""} as PublishPacket
+  let game = app.findGameById(game_id)
+  let payload = {cmd: result.cmd}
+  switch (result.cmd) {
+    case "deal":
+      payload['dealer_ndx'] = game.dealer_ndx
+      break
+    default:
+      break
+  }
+
+  packet.payload = JSON.stringify(payload)
+  console.log(packet)
+  aedes.publish(packet, () => {})
 }
 
 aedes.on('client', function (client) {
     if (client) {
-        console.log(`Client ${client.id} Connected to ${aedes.id}` )
-        
-        let player = app.addPlayer(client.id)
-        if (player._status === "lobby") {
-          let sub: Subscription = {topic: "games", qos: 0}
-          client.subscribe(sub, () => {})
-        }
+      if (app.findPlayerById(client.id)) {
+        return
+      }
+      console.log(`Client ${client.id} Connected to ${aedes.id}` )
+      
+      let player = app.addPlayer(client.id)
+      if (player._status === "lobby") {
+        let sub: Subscription = {topic: "games", qos: 0}
+        client.subscribe(sub, () => {})
+      }
     }
 })
 
@@ -70,9 +97,6 @@ aedes.on('unsubscribe', async function (subscriptions, client) {
     if (subscription === "games") {
       // pass
     } else {
-      console.log("leave")
-
-      // leave game
       app.leaveGame(subscription, client.id)
       let game = app.findGameById(subscription)
       aedes.publish({topic: game._id, payload: JSON.stringify(game)} as PublishPacket, () => {})

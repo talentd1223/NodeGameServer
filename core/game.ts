@@ -10,7 +10,7 @@ class Game {
     /**
      *  NOT READY // not enough players
      *  
-     *  READY // players all entered, must request bid for each player
+     *  READY // players all entered, start deal
      *  
      *  ROUND_START // bid finished, shuffle card, distributed to each player
      *  
@@ -21,15 +21,25 @@ class Game {
      */
     _bids: number[]
 
-    dealer_id: number // dealer position
-    current_turn: number // position for the current turn
+    dealer_ndx: number // dealer position
+    current_booker_id: number // position for the current booker id
+    prev_book_winner: number // equal to position where current booking started
+    round_id: number // current round id
+    round_scores: number[][][] // [[score, bags], [score, bags]] stands for record for individual rounds
+
     constructor(_id: string) {
-      this._id = _id;
-      this._players = []
+        this._id = _id;
+        this._players = []
+        this.round_id = 0
+        this.dealer_ndx = 3
+        this.current_booker_id = this.prev_book_winner = 0
+        this.round_scores = [[[], []]]
+        this._status = GAME_STATUS.NOT_READY
     }
 
     join(player: Player) {
         if (this._players.length < 4 && !this.isDuplicated(player)) {
+            player._status = "idle"
             this._players.push(player)
         }
     }
@@ -39,7 +49,14 @@ class Game {
     }
 
     leave(player: Player) {
-        this._players = this._players.filter(p => p._id !== player._id)
+        let player_ndx = (this.dealer_ndx + player.position_from_dealer) % 4
+        // for (let i = 0 ; i < this._players.length; i++) {
+        //     if (this._players[i]._id === player._id) {
+        //         player_ndx = i
+        //         break
+        //     }
+        // }
+        this._players.splice(player_ndx, 1)
     }
 
     book(value: number) {
@@ -58,11 +75,24 @@ class Game {
         }
     }
 
-    updateStatus () {
-        if (this._status === GAME_STATUS.NOT_READY && this._players.length === 4)
+    run() {
+        // responsible for updating status and do the necessary acts and return the next action
+        if (this._players.length !== 4) {
+            this._status = GAME_STATUS.NOT_READY
+        } else if (this._status === GAME_STATUS.NOT_READY && this._players.length === 4) {
+            // game start, set dealer_ndx
             this._status = GAME_STATUS.READY
-        else if (this._status === GAME_STATUS.PLAY && this._players[(3 + this.dealer_id) % 4].cards.length === 0)
-            this._status = GAME_STATUS.ROUND_OVER
+            for ( let i = 0; i < this._players.length; i++) {
+                let player = this._players[i]
+                player.position_from_dealer = (i - this.dealer_ndx + 4) % 4
+                player.team_id = i % 2
+                player.team_name = `${player._id} & ${this._players[(i + 2) % 4]._id}`
+            }
+
+            // order client to show deal animation
+            return {cmd: "deal", dealer_ndx: this.dealer_ndx}
+        }
+        return null
     }
 }
 

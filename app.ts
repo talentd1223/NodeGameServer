@@ -16,28 +16,53 @@ class App {
     players: Player[] = []
     
     constructor() {
+        this.games.push(
+            new Game("default_key")
+        )
     }
 
     getGameList() {
         return this.games.map((game) => game._id)
     }
 
-    createRoom(id: string) {
+    createGame(id: string) {
         let game: Game = new Game(id)
         this.games.push(game)
+
+        return game
+    }
+
+    joinGame(game_id: string, player_id: string) {
+        let game: Game = this.findGameById(game_id)
+        let player: Player = this.findPlayerById(player_id)
+
+        game.join(player)
+    }
+
+    leaveGame(game_id: string, player_id: string) {
+        let game: Game = this.findGameById(game_id)
+        let player: Player = this.findPlayerById(player_id)
+
+        game.leave(player)
     }
 
     addPlayer(id: string) {
-        let ret = null
-        let filtered = this.players.filter((player) => player._id === id)
+        let ret = this.findPlayerById(id)
         
-        if(!filtered.length) {
-            ret = this.players.push(new Player(id))
-        } else {
-            ret = filtered[0]
+        if(ret === null) {
+            ret = new Player(id)
+            this.players.push(ret)
         }
-
         return ret
+    }
+
+    findPlayerById(id: string) {
+        let filtered: Player[] = this.players.filter((player: Player) => player._id === id)
+        return filtered.length ? filtered[0] : null
+    }
+    findGameById(id: string) {
+        let filtered: Game[] = this.games.filter((game: Game) => game._id === id)
+        return filtered.length ? filtered[0] : null
     }
 }
 

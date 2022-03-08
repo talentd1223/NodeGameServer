@@ -29,8 +29,13 @@ class Game {
     }
 
     join(player: Player) {
-        if (this._players.length < 4)
+        if (this._players.length < 4 && !this.isDuplicated(player)) {
             this._players.push(player)
+        }
+    }
+
+    isDuplicated(player: Player) {
+        return this._players.filter((item: Player) => item._id === player._id).length !== 0
     }
 
     leave(player: Player) {

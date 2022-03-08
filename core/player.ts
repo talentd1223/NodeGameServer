@@ -11,7 +11,7 @@ class Player {
     // _bid_amount: number
     // _tricks_taken: number
     _cards: Card[]
-    _status: "lobby" | "inspect" | "idle" | "play"
+    _status: "lobby" | "idle" | "play" | "bid_ready"
 
     constructor(id: string) {
         this._id = id
@@ -21,6 +21,15 @@ class Player {
 
     public set cards( data: Card[]) {
         this._cards = data
+    }
+
+    public get cards() {
+        let data = []
+        for(let i = 0; i <this._cards.length; i++) {
+            data.push(this._cards[i].toString())
+        }
+
+        return data.sort( )
     }
 
     public get is_dealer(){

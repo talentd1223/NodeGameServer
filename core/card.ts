@@ -1,7 +1,7 @@
 import { SUIT } from "./types"
 
 var values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
-var suits = ['♠', '♥', '♣', '♥']
+var suits = ['♠', '♥', '♣', '♦']
 class Card {
     _suit: SUIT
     _value: number

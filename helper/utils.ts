@@ -6,14 +6,16 @@ export const range = (n) => ([...Array(n).keys()])
 export const shuffle = () => {
     let data:any[] = range(52)
     let index = 0;
-    while (index < 52) {
+    while (index < 100) {
         let pos = Math.floor(Math.random() * 52)
         // swap [index] with [pos]
-        data.splice(pos, 1, data[index++])[0]
+        let new_pos = index % 52
+        data[new_pos] = data.splice(pos, 1, data[new_pos])[0]
+        index ++;
     }
     
     for (let i = 0; i < 52; i++) {
-        data[i] = new Card(i)
+        data[i] = new Card(data[i])
     }
     return data
 }

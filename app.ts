@@ -17,7 +17,7 @@ class App {
     
     constructor() {
         this.games.push(
-            new Game("default_key")
+            new Game("default_room")
         )
     }
 

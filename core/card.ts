@@ -9,6 +9,14 @@ class Card {
     constructor(value: number) {
         this._suit = Math.floor(value / 13)
         this._value = Math.floor(value % 13)
+
+        if (this._suit === SUIT.CLUB && this._value === 2) {
+            this._suit = SUIT.SPADE
+            this._value = 15
+        } else if(this._suit === SUIT.HEART && this._value === 2) {
+            this._suit = SUIT.SPADE
+            this._value = 14
+        }
         return this
     }
 

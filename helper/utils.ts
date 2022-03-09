@@ -31,11 +31,7 @@ export const winner = (cards: Card[], book_suit: SUIT) => {
     for (let i = 0; i < cards.length; i++) {
         let value = cards[i]._value === 0 ? 13: cards[i]._value // set highest for ace
         
-        if (cards[i]._suit === SUIT.CLUB && cards[i]._value === 2) {
-            value = 10000
-        } else if (cards[i]._suit === SUIT.CLUB && cards[i]._value === 2) {
-            value = 5000
-        } else if(cards[i]._suit !== book_suit) {
+       if(cards[i]._suit !== book_suit) {
             // set value higher for spades, lower for other suits
             value = cards[i]._suit === SUIT.SPADE ? value + 100 : value - 100 
         }

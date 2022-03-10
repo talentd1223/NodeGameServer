@@ -21,12 +21,7 @@ class Card {
     }
 
     toString () {
-        let result = `${suits[this._suit]}${values[this._value]}`
-        if (this._suit === SUIT.CLUB && this._value === 2) {
-            result = '🃏Big'
-        } else if(this._suit === SUIT.HEART && this._value === 2) {
-            result = '🃏Small'
-        }
+        let result = `${this._suit}-${this._value}`
         return result
     }
 }

@@ -19,6 +19,10 @@ class Player {
         this._status = "lobby"
     }
 
+    public removeCard(card: Card) {
+        this._cards = this._cards.filter((value) => !(value._suit === card._suit && value._value === card._value))
+    }
+
     public set cards( data: Card[]) {
         this._cards = data
     }

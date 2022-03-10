@@ -25,8 +25,8 @@ export const shuffle = () => {
  * @param book_suit 
  * @return 1 (first > second), -1 (first < second), 0(first = second)
  */
-export const winner = (cards: Card[], book_suit: SUIT) => {
-    let winner_id = 0
+export const decide_winner = (cards: Card[], book_suit: SUIT) => {
+    let winner_ndx = 0
     let max_val = 0
     for (let i = 0; i < cards.length; i++) {
         let value = cards[i]._value === 0 ? 13: cards[i]._value // set highest for ace
@@ -35,9 +35,9 @@ export const winner = (cards: Card[], book_suit: SUIT) => {
             // set value higher for spades, lower for other suits
             value = cards[i]._suit === SUIT.SPADE ? value + 100 : value - 100 
         }
-        winner_id = value > max_val ? i : winner_id
+        winner_ndx = value > max_val ? i : winner_ndx
         max_val = value > max_val ? value : max_val
     }
 
-    return winner_id
+    return winner_ndx
 }

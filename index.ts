@@ -3,6 +3,7 @@ import 'dotenv/config'
 import { createServer } from 'aedes-server-factory'
 
 import App from './app'
+import Card from './core/card'
 
 const app = App.getInstance()
 const aedes = Aedes()
@@ -95,6 +96,16 @@ function handleClientPublish(payload, client_id, game_id) {
       game.bid(payload.bid_amount)
       p_payload = game.run()
       break
+    case "book":
+      player._status = 'idle'
+      let card: Card = new Card(0)
+      card._suit = Number(payload.card.split("-")[0])
+      card._value = Number(payload.card.split("-")[1])
+      game.book(card)
+      
+      p_payload = game.run()
+      break
+
     default:
       break
   }

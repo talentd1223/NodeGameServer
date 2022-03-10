@@ -38,7 +38,7 @@ class Game {
         this.round_id = 0
         this.dealer_ndx = 3
         this.current_booker_ndx = this.prev_book_winner = 0
-        this.round_scores = [[[], []]]
+        this.round_scores = []
         this._bids= [null, null, null, null]
         this.books_taken= [0, 0, 0, 0]
         this.books= [null, null, null, null]

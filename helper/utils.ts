@@ -3,7 +3,10 @@ import { SUIT } from '../core/types';
 
 export const range = (n) => ([...Array(n).keys()])
 
-export const shuffle = () => {
+export const shuffle = (is_diamond_trump: boolean) => {
+    console.log("constructor")
+    console.log(is_diamond_trump)
+
     let data:any[] = range(52)
     let index = 0;
     while (index < 100) {
@@ -15,7 +18,7 @@ export const shuffle = () => {
     }
     
     for (let i = 0; i < 52; i++) {
-        data[i] = new Card(data[i])
+        data[i] = new Card(data[i], is_diamond_trump)
     }
     return data
 }

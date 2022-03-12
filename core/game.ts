@@ -31,8 +31,10 @@ class Game {
     books_taken: number[]
     spade_broken: boolean
     book_suit: SUIT
+    
+    is_diamond_trump: boolean
 
-    constructor(_id: string) {
+    constructor(_id: string, is_diamond_trump?: boolean) {
         this._id = _id;
         this._players = []
         this.round_id = 0
@@ -44,6 +46,9 @@ class Game {
         this.books= [null, null, null, null]
         this._status = GAME_STATUS.NOT_READY
         this.spade_broken = false
+        this.is_diamond_trump = is_diamond_trump ? is_diamond_trump: false
+        console.log("constructor")
+        console.log(this.is_diamond_trump)
     }
 
     join(player: Player) {
@@ -81,7 +86,7 @@ class Game {
     }
 
     deckShuffle() {
-        let cards = shuffle()
+        let cards = shuffle(this.is_diamond_trump)
         let ret:Card[][] = [[], [], [], []]
         for (let i = 0; i < cards.length; i++) {
             ret[i % 4].push(cards[i])

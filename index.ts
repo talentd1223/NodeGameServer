@@ -98,7 +98,7 @@ function handleClientPublish(payload, client_id, game_id) {
       break
     case "book":
       player._status = 'idle'
-      let card: Card = new Card(0)
+      let card: Card = new Card(0, game.is_diamond_trump)
       card._suit = Number(payload.card.split("-")[0])
       card._value = Number(payload.card.split("-")[1])
       game.book(card)

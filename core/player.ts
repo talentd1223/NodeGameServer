@@ -11,7 +11,7 @@ class Player {
     // _bid_amount: number
     // _tricks_taken: number
     _cards: Card[]
-    _status: "lobby" | "idle" | "play" | "bid_ready"
+    _status: "lobby" | "idle" | "play" | "bid_ready" | "round_ready"
 
     constructor(id: string) {
         this._id = id

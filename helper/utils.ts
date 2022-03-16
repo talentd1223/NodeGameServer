@@ -4,8 +4,6 @@ import { SUIT } from '../core/types';
 export const range = (n) => ([...Array(n).keys()])
 
 export const shuffle = (is_diamond_trump: boolean) => {
-    console.log("constructor")
-    console.log(is_diamond_trump)
 
     let data:any[] = range(52)
     let index = 0;

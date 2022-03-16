@@ -11,5 +11,6 @@ export enum GAME_STATUS {
     BID,
     BOOK,
     BOOK_OVER,
-    ROUND_OVER
+    ROUND_OVER,
+    GAME_OVER,
 }

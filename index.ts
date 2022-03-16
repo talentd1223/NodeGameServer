@@ -89,6 +89,9 @@ function handleClientPublish(payload, client_id, game_id) {
     case "card_open":
       let cards = player.cards
       let p = JSON.stringify({cmd: "cards", cards: cards})
+
+      console.log("client " + client_id + "card opened")
+      console.log(p)
       aedes.publish({topic: `${game_id}_${client_id}`, payload: p } as PublishPacket, () => {})
       break
     case "bid":
@@ -105,10 +108,14 @@ function handleClientPublish(payload, client_id, game_id) {
       
       p_payload = game.run()
       break
-
+    case "round_ready":
+      player._status = 'round_ready'
+      p_payload = game.run()
+      break;
     default:
       break
   }
+
   console.log("handleClientPublish")
   console.log(p_payload)
 

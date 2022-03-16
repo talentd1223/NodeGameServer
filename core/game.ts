@@ -33,22 +33,24 @@ class Game {
     book_suit: SUIT
     
     is_diamond_trump: boolean
+    
+    score_limit: number
 
     constructor(_id: string, is_diamond_trump?: boolean) {
         this._id = _id;
         this._players = []
         this.round_id = 0
-        this.dealer_ndx = 3
-        this.current_booker_ndx = this.prev_book_winner = 0
+        this.dealer_ndx = 0
+        this.current_booker_ndx = this.prev_book_winner = 1
         this.round_scores = []
         this._bids= [null, null, null, null]
         this.books_taken= [0, 0, 0, 0]
         this.books= [null, null, null, null]
         this._status = GAME_STATUS.NOT_READY
         this.spade_broken = false
-        this.is_diamond_trump = is_diamond_trump ? is_diamond_trump: false
-        console.log("constructor")
-        console.log(this.is_diamond_trump)
+        this.is_diamond_trump = true
+        this.score_limit = 500
+        // this.is_diamond_trump = is_diamond_trump ? is_diamond_trump: false
     }
 
     join(player: Player) {
@@ -101,7 +103,12 @@ class Game {
         // responsible for updating status and do the necessary acts and return the next action
         if (this._players.length !== 4) {
             this._status = GAME_STATUS.NOT_READY
-        } else if (this._status === GAME_STATUS.NOT_READY && this._players.length === 4) {
+        } else if (
+            this._players.length === 4 && (
+                this._status === GAME_STATUS.NOT_READY
+                || this._status === GAME_STATUS.ROUND_OVER && this.arePlayersReady
+            )
+        ) {
             // game start, set dealer_ndx
             this._status = GAME_STATUS.READY
             for ( let i = 0; i < this._players.length; i++) {
@@ -148,29 +155,38 @@ class Game {
             }
         } else if (this._status === GAME_STATUS.BOOK) {
             let ret = {cmd: "book_req"}
-
             if (this.isBookOver) {
                 this.finalizeBook()
                 ret['book_taken'] = this.books_taken
 
                 if(this.availableCards.length === 0) {
                     this.round_scores.push([this.get_round_result(0), this.get_round_result(1)])
-                    this._status = GAME_STATUS.NOT_READY
-                    return {cmd: "round_result", data: this.round_scores}
+                    return this.decideRoundResult()
                 }
             }
             let result = {...ret, available: this.availableCards, booker_id: this.currentPlayer._id}
             return result
-        } 
-        // else if (this._status === GAME_STATUS.ROUND_OVER) {
-        //     // round_scores: number[][][] // [[score, bags], [score, bags]] stands for record for individual rounds
-        //     this.round_scores.push([this.get_round_result(0), this.get_round_result(1)])
-        //     this._status = GAME_STATUS.NOT_READY
-        //     return {cmd: "round_result", data: this.round_scores}
-        // }
+        }
         return null
     }
 
+    public decideRoundResult() {
+        let score_0 = this.getTeamScore(0)
+        let score_1 = this.getTeamScore(1)
+        this._bids= [null, null, null, null]
+        this.books_taken= [0, 0, 0, 0]
+        this.spade_broken = false
+
+        if (Math.abs(score_1) >= this.score_limit || Math.abs(score_0) >= this.score_limit) {
+            let winner = score_0 > score_1 ? `${this._players[0]._name} & ${this._players[2]._name}`: `${this._players[1]._name} & ${this._players[3]._name}`; 
+            this._status = GAME_STATUS.GAME_OVER
+            return {cmd: "game_result", data: this.round_scores, winner: winner}
+        } else {
+            this._status = GAME_STATUS.ROUND_OVER
+            this.round_id ++
+            return {cmd: "round_result", data: this.round_scores}
+        }
+    }
     public get_round_result(team_id: 0 | 1) : number[]{
         let bids = this._bids[team_id] + this._bids[team_id + 2]
         let taken = this.books_taken[team_id] + this.books_taken[team_id + 2]
@@ -182,6 +198,13 @@ class Game {
         }
     }
 
+    public getTeamScore(team_ndx: 0 | 1) {
+        let score = 0
+        for (let i = 0; i < this.round_scores.length; i++) {
+            score += this.round_scores[i][team_ndx][0]
+        }
+        return score
+    }
     public finalizeBook() {
         // 1) decide winner & record taken book
         let winner_ndx = decide_winner(this.books, this.book_suit)
@@ -195,12 +218,9 @@ class Game {
         this.current_booker_ndx = winner_ndx
         this.books = [null, null, null, null]
     }
-
+    
     public get availableCards(): Card[] {
         console.log(this.currentPlayer._cards)
-        console.log("this.isBookStarted: " + this.isBookStarted)
-        console.log("book_suit: " + this.book_suit)
-        console.log("currentHaveBookSuit: " + this.currentHaveBookSuit)
 
         let cards = this.currentPlayer._cards.filter((card: Card)=> {
             let ret = true
@@ -231,6 +251,10 @@ class Game {
     }
     public get isBookStarted(): boolean {
         return this.books.every(book => book === null)
+    }
+
+    public get arePlayersReady(): boolean {
+        return this._players.every(player => player._status === 'round_ready')
     }
 }
 

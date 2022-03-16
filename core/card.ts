@@ -7,11 +7,10 @@ class Card {
     _value: number
 
     constructor(value: number, is_diamond_trump?: boolean) {
-        console.log(is_diamond_trump)
         this._suit = Math.floor(value / 13)
         this._value = Math.floor(value % 13)
 
-        if (this._value === 2) {
+        if (this._value === 1) {
             switch (this._suit) {
                 case SUIT.CLUB:
                     this._suit = SUIT.SPADE
@@ -22,13 +21,11 @@ class Card {
                     this._value = 16
                     break
                 case SUIT.DIAMOND:
-                    if (is_diamond_trump) {
-                        this._suit = SUIT.SPADE
-                        this._value = 15
-                    }
+                    this._suit = SUIT.SPADE
+                    this._value = is_diamond_trump ? 15 : 14
                     break
                 default:
-                    this._value = 14
+                    this._value = is_diamond_trump ? 14 : 15
                     break
             }
         }

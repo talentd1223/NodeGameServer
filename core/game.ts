@@ -50,7 +50,6 @@ class Game {
         this.spade_broken = false
         this.is_diamond_trump = true
         this.score_limit = 500
-        // this.is_diamond_trump = is_diamond_trump ? is_diamond_trump: false
     }
 
     join(player: Player) {
@@ -79,7 +78,6 @@ class Game {
             this.books[this.current_booker_ndx] = value
             
             if (this.books.filter(i => i).length === 1) {
-                // first book, set suit
                 this.book_suit = value._suit
             }
             this.currentPlayer.removeCard(value)
@@ -148,7 +146,6 @@ class Game {
                     return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: 0, max: 10}
                 } else {
                     this._status = GAME_STATUS.BOOK
-                    console.log(`prev_book_winner: ${this.prev_book_winner}, current_booker_ndx: ${this.current_booker_ndx}`)
                     this.prev_book_winner = this.current_booker_ndx
                     return {cmd: "book_req", available: this.availableCards, booker_id: this.currentPlayer._id}
                 }
@@ -220,8 +217,6 @@ class Game {
     }
     
     public get availableCards(): Card[] {
-        console.log(this.currentPlayer._cards)
-
         let cards = this.currentPlayer._cards.filter((card: Card)=> {
             let ret = true
             // when book just started

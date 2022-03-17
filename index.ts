@@ -37,7 +37,6 @@ function handleSubscribe(topic, client, payload = "") {
       response.payload = JSON.stringify(app.findGameById(topic))
       break
   }
-  console.log(response)
   aedes.publish( response as PublishPacket, () => {})
   handleRunResult(result, topic)
 }
@@ -56,7 +55,6 @@ function handleRunResult(result, game_id) {
   }
 
   packet.payload = JSON.stringify(payload)
-  console.log(packet)
   aedes.publish(packet, () => {})
 }
 
@@ -90,8 +88,6 @@ function handleClientPublish(payload, client_id, game_id) {
       let cards = player.cards
       let p = JSON.stringify({cmd: "cards", cards: cards})
 
-      console.log("client " + client_id + "card opened")
-      console.log(p)
       aedes.publish({topic: `${game_id}_${client_id}`, payload: p } as PublishPacket, () => {})
       break
     case "bid":
@@ -115,9 +111,6 @@ function handleClientPublish(payload, client_id, game_id) {
     default:
       break
   }
-
-  console.log("handleClientPublish")
-  console.log(p_payload)
 
   if (p_payload) {
     packet.payload = JSON.stringify(p_payload)

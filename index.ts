@@ -48,7 +48,7 @@ function handleRunResult(result, game_id) {
   let payload = {cmd: result.cmd}
   switch (result.cmd) {
     case "deal":
-      payload['dealer_ndx'] = game.dealer_ndx
+      payload['dealer_ndx'] = game.dealerNdx
       break
     default:
       break
@@ -151,6 +151,7 @@ aedes.on('unsubscribe', async function (subscriptions, client) {
       // pass
     } else {
       app.leaveGame(subscription, client.id)
+
       let game = app.findGameById(subscription)
       aedes.publish({topic: game._id, payload: JSON.stringify(game)} as PublishPacket, () => {})
     }

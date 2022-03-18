@@ -21,9 +21,7 @@ class Game {
      */
     _bids: number[]
 
-    dealer_ndx: number // dealer position
     current_booker_ndx: number // position for the current booker id
-    prev_book_winner: number // equal to position where current booking started
     round_id: number // current round id
     round_scores: number[][][] // [[score, bags], [score, bags]] stands for record for individual rounds
 
@@ -40,8 +38,7 @@ class Game {
         this._id = _id;
         this._players = []
         this.round_id = 0
-        this.dealer_ndx = 0
-        this.current_booker_ndx = this.prev_book_winner = 1
+        this.current_booker_ndx = 1
         this.round_scores = []
         this._bids= [null, null, null, null]
         this.books_taken= [0, 0, 0, 0]
@@ -49,7 +46,7 @@ class Game {
         this._status = GAME_STATUS.NOT_READY
         this.spade_broken = false
         this.is_diamond_trump = true
-        this.score_limit = 500
+        this.score_limit = 200
     }
 
     join(player: Player) {
@@ -64,7 +61,7 @@ class Game {
     }
 
     leave(player: Player) {
-        let player_ndx = (this.dealer_ndx + player.position_from_dealer) % 4
+        let player_ndx = (this.dealerNdx + player.position_from_dealer) % 4
         this._players.splice(player_ndx, 1)
     }
 
@@ -111,13 +108,13 @@ class Game {
             this._status = GAME_STATUS.READY
             for ( let i = 0; i < this._players.length; i++) {
                 let player = this._players[i]
-                player.position_from_dealer = (i - this.dealer_ndx + 4) % 4
+                player.position_from_dealer = (i - this.dealerNdx + 4) % 4
                 player.team_id = i % 2
                 player.team_name = `${player._id} & ${this._players[(i + 2) % 4]._id}`
             }
 
             // order client to show deal animation
-            return {cmd: "deal", dealer_ndx: this.dealer_ndx}
+            return {cmd: "deal", dealer_ndx: this.dealerNdx}
         } else if (this._status === GAME_STATUS.READY) {
             let bid_ready = true
             for (let i = 0 ; i < this._players.length; i ++) {
@@ -146,7 +143,6 @@ class Game {
                     return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: 0, max: 10}
                 } else {
                     this._status = GAME_STATUS.BOOK
-                    this.prev_book_winner = this.current_booker_ndx
                     return {cmd: "book_req", available: this.availableCards, booker_id: this.currentPlayer._id}
                 }
             }
@@ -181,6 +177,7 @@ class Game {
         } else {
             this._status = GAME_STATUS.ROUND_OVER
             this.round_id ++
+            this.current_booker_ndx = this.dealerNdx
             return {cmd: "round_result", data: this.round_scores}
         }
     }
@@ -205,7 +202,6 @@ class Game {
     public finalizeBook() {
         // 1) decide winner & record taken book
         let winner_ndx = decide_winner(this.books, this.book_suit)
-        this.prev_book_winner = winner_ndx
         this.books_taken[winner_ndx] ++
 
         // 2) decide spade is broken
@@ -231,6 +227,10 @@ class Game {
         })
 
         return cards
+    }
+
+    public get dealerNdx(): number {
+        return (this.round_id + 1) % 4
     }
 
     public get currentPlayer(): Player {

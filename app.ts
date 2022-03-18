@@ -43,9 +43,10 @@ class App {
     leaveGame(game_id: string, player_id: string) {
         let game: Game = this.findGameById(game_id)
         let player: Player = this.findPlayerById(player_id)
-
-        game.leave(player)
-        return game.run()
+        if(game) {
+            game.leave(player)
+            return game.run()
+        }
     }
 
     addPlayer(id: string) {

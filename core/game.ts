@@ -66,8 +66,14 @@ class Game {
     }
 
     bid(value: number) {
-        this._bids[ this.current_booker_ndx ] = (value)
-        this.current_booker_ndx = (this.current_booker_ndx + 1) % 4
+        if (value === -1) {
+            // blind bid rejected, team member's blind bid set as null
+            this._bids[ (this.current_booker_ndx + 2) % 2] = null
+            this.current_booker_ndx = (this.current_booker_ndx + 1) % 4
+        } else {
+            this._bids[ this.current_booker_ndx ] = (value)
+            this.current_booker_ndx = (this.current_booker_ndx + 1) % 4
+        }
     }
 
     book(value: Card) {
@@ -110,31 +116,31 @@ class Game {
 
                 this.deckShuffle()
 
-                if( this.someCanBlindBid) {
+                if(this.someCanBlindBid) {
                     this._status = GAME_STATUS.BLIND_BID
                     let bid_ndx = this.curBlindBidSeat
 
                     return {cmd: "blind_bid_req", bid_ndx: bid_ndx, bid_id: this._players[bid_ndx]._id, min: 0, max: 13}
-                    // if (this.canBlindBid(this.current_booker_ndx)) {
-                    //     return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: 0, max: 13}
-                    // } else {
-                    //     this.current_booker_ndx += this.current_booker_ndx  % 2
-                    // }
                 }
                 else {
-                    this._status = GAME_STATUS.BID
+                    this.enterBidStatus()
                 }
                 // return {cmd: "book_req", available: this.availableCards, booker_id: this.currentPlayer._id}
 
-                return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: 0, max: 10}
+                // return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: 0, max: 10}
             }
         }
         else if (this._status === GAME_STATUS.BLIND_BID) {
-            if (!this.canBlindBid(this.current_booker_ndx)) {
-                let min = this._bids[(this.current_booker_ndx + 2) % 4]
-                let max = 13 - min > 10 ? 10 : 13 - min
+            let bid_ndx = this.curBlindBidSeat
+            let prevTeamBid = this._bids[(bid_ndx + 2) % 4]
+
+            if (this.canBlindBid(bid_ndx) && prevTeamBid !== null && this._bids[bid_ndx] === null) {
+                let min = prevTeamBid > 6 ? 0 : 6 - prevTeamBid
+                let max = 13
+                return {cmd: "blind_bid_req", bid_ndx: bid_ndx, bid_id: this._players[bid_ndx]._id, min: min, max: max}
+            } else {
+                this.enterBidStatus()
             }
-            
         } else if(this._status === GAME_STATUS.BID) {
 
         // } else if(this._status === GAME_STATUS.BID) {
@@ -172,6 +178,14 @@ class Game {
             return result
         }
         return null
+    }
+
+    public enterBidStatus() {
+        this._status = GAME_STATUS.BID
+        this.current_booker_ndx = (this.dealerNdx + 1) % 4
+        if (this._players[this.current_booker_ndx] !== null) {
+            this.current_booker_ndx = (this.current_booker_ndx + 1) % 2
+        }
     }
 
     public decideRoundResult() {
@@ -275,8 +289,9 @@ class Game {
     }
 
     public canBlindBid(player_ndx: number): boolean {
-        if (this.getTeamScore(player_ndx) < this.getTeamScore(player_ndx + 1) - 100)
-            return true
+        if (this.getTeamScore(player_ndx) < this.getTeamScore(player_ndx + 1) - 100) {
+            return true 
+        }
         else
             return false
     }

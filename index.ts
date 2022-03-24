@@ -85,6 +85,8 @@ function handleClientPublish(payload, client_id, game_id) {
       p_payload = game.run()
       break
     case "blind_bid":
+      game.bid(payload.bid_amount)
+      p_payload = game.run()
       // player._status = 'bid_ready'
 
     case "card_open":

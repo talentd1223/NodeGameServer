@@ -8,6 +8,7 @@ export enum SUIT {
 export enum GAME_STATUS {
     NOT_READY,
     READY,
+    BLIND_BID,
     BID,
     BOOK,
     BOOK_OVER,

@@ -84,6 +84,9 @@ function handleClientPublish(payload, client_id, game_id) {
       player._status = 'bid_ready'
       p_payload = game.run()
       break
+    case "blind_bid":
+      // player._status = 'bid_ready'
+
     case "card_open":
       let cards = player.cards
       let p = JSON.stringify({cmd: "cards", cards: cards})

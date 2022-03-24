@@ -96,56 +96,67 @@ class Game {
 
     run() {
         // responsible for updating status and do the necessary acts and return the next action
-        if (this._players.length !== 4) {
+        if (this.isEnoughPlayers) {
             this._status = GAME_STATUS.NOT_READY
-        } else if (
-            this._players.length === 4 && (
-                this._status === GAME_STATUS.NOT_READY
-                || this._status === GAME_STATUS.ROUND_OVER && this.arePlayersReady
-            )
-        ) {
-            // game start, set dealer_ndx
+        } else if ( this.isGameReady) {
+            
             this._status = GAME_STATUS.READY
-            for ( let i = 0; i < this._players.length; i++) {
-                let player = this._players[i]
-                player.position_from_dealer = (i - this.dealerNdx + 4) % 4
-                player.team_id = i % 2
-                player.team_name = `${player._id} & ${this._players[(i + 2) % 4]._id}`
-            }
+            this.setGameParameters()
 
-            // order client to show deal animation
             return {cmd: "deal", dealer_ndx: this.dealerNdx}
         } else if (this._status === GAME_STATUS.READY) {
-            let bid_ready = true
-            for (let i = 0 ; i < this._players.length; i ++) {
-                bid_ready = bid_ready && this._players[i]._status === 'bid_ready'
-            }
 
-            if (bid_ready) {
+            if (this.allBidReady) {
+
                 this.deckShuffle()
-                this._status = GAME_STATUS.BID
+
+                if( this.someCanBlindBid) {
+                    this._status = GAME_STATUS.BLIND_BID
+                    let bid_ndx = this.curBlindBidSeat
+
+                    return {cmd: "blind_bid_req", bid_ndx: bid_ndx, bid_id: this._players[bid_ndx]._id, min: 0, max: 13}
+                    // if (this.canBlindBid(this.current_booker_ndx)) {
+                    //     return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: 0, max: 13}
+                    // } else {
+                    //     this.current_booker_ndx += this.current_booker_ndx  % 2
+                    // }
+                }
+                else {
+                    this._status = GAME_STATUS.BID
+                }
+                // return {cmd: "book_req", available: this.availableCards, booker_id: this.currentPlayer._id}
+
                 return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: 0, max: 10}
             }
-        } else if(this._status === GAME_STATUS.BID) {
-            
-            if (this._bids.some(val => val === null)) {
+        }
+        else if (this._status === GAME_STATUS.BLIND_BID) {
+            if (!this.canBlindBid(this.current_booker_ndx)) {
                 let min = this._bids[(this.current_booker_ndx + 2) % 4]
                 let max = 13 - min > 10 ? 10 : 13 - min
-                min = min === null ? 0 : 4 - min
-                return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: min, max: max}
             }
-            else {
-                // Invalid Bid
-                if(this._bids.reduce( (a, b) => a + b) < 10) {
-                    // shuffle again and restart bidding
-                    this.deckShuffle()
-                    this._bids = [null, null, null, null]
-                    return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: 0, max: 10}
-                } else {
-                    this._status = GAME_STATUS.BOOK
-                    return {cmd: "book_req", available: this.availableCards, booker_id: this.currentPlayer._id}
-                }
-            }
+            
+        } else if(this._status === GAME_STATUS.BID) {
+
+        // } else if(this._status === GAME_STATUS.BID) {
+            
+        //     if (this._bids.some(val => val === null)) {
+        //         let min = this._bids[(this.current_booker_ndx + 2) % 4]
+        //         let max = 13 - min > 10 ? 10 : 13 - min
+        //         min = min === null ? 0 : 4 - min
+        //         return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: min, max: max}
+        //     }
+        //     else {
+        //         // Invalid Bid
+        //         if(this._bids.reduce( (a, b) => a + b) < 10) {
+        //             // shuffle again and restart bidding
+        //             this.deckShuffle()
+        //             this._bids = [null, null, null, null]
+        //             return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: 0, max: 10}
+        //         } else {
+        //             this._status = GAME_STATUS.BOOK
+        //             return {cmd: "book_req", available: this.availableCards, booker_id: this.currentPlayer._id}
+        //         }
+        //     }
         } else if (this._status === GAME_STATUS.BOOK) {
             let ret = {cmd: "book_req"}
             if (this.isBookOver) {
@@ -192,13 +203,24 @@ class Game {
         }
     }
 
-    public getTeamScore(team_ndx: 0 | 1) {
+    public getTeamScore(team_ndx) {
+        team_ndx = team_ndx % 2
         let score = 0
         for (let i = 0; i < this.round_scores.length; i++) {
             score += this.round_scores[i][team_ndx][0]
         }
         return score
     }
+    
+    public setGameParameters() {
+        for ( let i = 0; i < this._players.length; i++) {
+            let player = this._players[i]
+            player.position_from_dealer = (i - this.dealerNdx + 4) % 4
+            player.team_id = i % 2
+            player.team_name = `${player._id} & ${this._players[(i + 2) % 4]._id}`
+        }
+    } 
+
     public finalizeBook() {
         // 1) decide winner & record taken book
         let winner_ndx = decide_winner(this.books, this.book_suit)
@@ -211,7 +233,30 @@ class Game {
         this.current_booker_ndx = winner_ndx
         this.books = [null, null, null, null]
     }
+
+    public get isEnoughPlayers(): boolean {
+        return this._players.length === 4
+    }
+
+    public get isGameReady(): boolean {
+        let isValidStatus: boolean = this._status === GAME_STATUS.NOT_READY || this._status === GAME_STATUS.ROUND_OVER
+        return this.isEnoughPlayers && this.arePlayersReady && isValidStatus
+    }
+
+    public get allBidReady() {
+        return this._players.every((player: Player) => player._status === 'bid_ready')
+    }
     
+    public get someCanBlindBid(): boolean {
+        return this.canBlindBid(0) || this.canBlindBid(1)
+    }
+
+    public get curBlindBidSeat(): number {
+        if (!this.canBlindBid(this.current_booker_ndx)) {
+            this.current_booker_ndx = (this.current_booker_ndx + 1) % 4;
+        }
+        return this.current_booker_ndx
+    }
     public get availableCards(): Card[] {
         let cards = this.currentPlayer._cards.filter((card: Card)=> {
             let ret = true
@@ -229,6 +274,12 @@ class Game {
         return cards
     }
 
+    public canBlindBid(player_ndx: number): boolean {
+        if (this.getTeamScore(player_ndx) < this.getTeamScore(player_ndx + 1) - 100)
+            return true
+        else
+            return false
+    }
     public get dealerNdx(): number {
         return (this.round_id + 1) % 4
     }

@@ -66,12 +66,12 @@ class Game {
     }
 
     bid(value: number) {
-        if (value === -1) {
+        if (value === -1 && this._status === GAME_STATUS.BLIND_BID) {
             // blind bid rejected, team member's blind bid set as null
             this._bids[ (this.current_booker_ndx + 2) % 2] = null
             this.current_booker_ndx = (this.current_booker_ndx + 1) % 4
         } else {
-            this._bids[ this.current_booker_ndx ] = (value)
+            this._bids[ this.current_booker_ndx ] = value > 0 ? value: 0
             this.current_booker_ndx = (this.current_booker_ndx + 1) % 4
         }
     }
@@ -123,11 +123,8 @@ class Game {
                     return {cmd: "blind_bid_req", bid_ndx: bid_ndx, bid_id: this._players[bid_ndx]._id, min: 0, max: 13}
                 }
                 else {
-                    this.enterBidStatus()
+                    return this.enterBidStatus()
                 }
-                // return {cmd: "book_req", available: this.availableCards, booker_id: this.currentPlayer._id}
-
-                // return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: 0, max: 10}
             }
         }
         else if (this._status === GAME_STATUS.BLIND_BID) {
@@ -139,30 +136,25 @@ class Game {
                 let max = 13
                 return {cmd: "blind_bid_req", bid_ndx: bid_ndx, bid_id: this._players[bid_ndx]._id, min: min, max: max}
             } else {
-                this.enterBidStatus()
+                return this.enterBidStatus()
             }
         } else if(this._status === GAME_STATUS.BID) {
-
-        // } else if(this._status === GAME_STATUS.BID) {
             
-        //     if (this._bids.some(val => val === null)) {
-        //         let min = this._bids[(this.current_booker_ndx + 2) % 4]
-        //         let max = 13 - min > 10 ? 10 : 13 - min
-        //         min = min === null ? 0 : 4 - min
-        //         return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: min, max: max}
-        //     }
-        //     else {
-        //         // Invalid Bid
-        //         if(this._bids.reduce( (a, b) => a + b) < 10) {
-        //             // shuffle again and restart bidding
-        //             this.deckShuffle()
-        //             this._bids = [null, null, null, null]
-        //             return {cmd: "blind_bid_req", bid_ndx: this.current_booker_ndx, bid_id: this._players[this.current_booker_ndx]._id, min: 0, max: 10}
-        //         } else {
-        //             this._status = GAME_STATUS.BOOK
-        //             return {cmd: "book_req", available: this.availableCards, booker_id: this.currentPlayer._id}
-        //         }
-        //     }
+            if (this._bids.some(val => val === null)) {
+                
+                let min = this._bids[(this.current_booker_ndx + 2) % 4]
+                let max = 13 - min > 10 ? 10 : 13 - min
+                min = min === null ? 0 : 4 - min
+                
+                let ret ={cmd: "bid_req", cards: this.currentPlayer.cards, bid_id: this.currentPlayer._id, bid_ndx: this.current_booker_ndx, min, max}
+                if(this._bids[this.current_booker_ndx] !== null) {
+                    ret["bid_amount"] = this._bids[this.current_booker_ndx]
+                }
+                return ret;
+            } else {
+                this._status = GAME_STATUS.BOOK
+                return {cmd: "book_req", available: this.availableCards, booker_id: this.currentPlayer._id}
+            }
         } else if (this._status === GAME_STATUS.BOOK) {
             let ret = {cmd: "book_req"}
             if (this.isBookOver) {
@@ -183,9 +175,11 @@ class Game {
     public enterBidStatus() {
         this._status = GAME_STATUS.BID
         this.current_booker_ndx = (this.dealerNdx + 1) % 4
-        if (this._players[this.current_booker_ndx] !== null) {
-            this.current_booker_ndx = (this.current_booker_ndx + 1) % 2
+        let ret ={cmd: "bid_req", cards: this.currentPlayer.cards, bid_id: this.currentPlayer._id, bid_ndx: this.current_booker_ndx}
+        if(this._bids[this.current_booker_ndx] !== null) {
+            ret["bid_amount"] = this._bids[this.current_booker_ndx]
         }
+        return ret
     }
 
     public decideRoundResult() {

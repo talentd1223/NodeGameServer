@@ -120,6 +120,7 @@ function handleClientPublish(payload, client_id, game_id) {
   if (p_payload) {
     if (p_payload.cmd === "bid_req") 
       packet.topic = `${game_id}_${client_id}`
+      
     packet.payload = JSON.stringify(p_payload)
 
     console.log("handleClientPublish")

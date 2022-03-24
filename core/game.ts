@@ -69,11 +69,11 @@ class Game {
         if (value === -1 && this._status === GAME_STATUS.BLIND_BID) {
             // blind bid rejected, team member's blind bid set as null
             this._bids[ (this.current_booker_ndx + 2) % 2] = null
-            this.current_booker_ndx = (this.current_booker_ndx + 1) % 4
         } else {
             this._bids[ this.current_booker_ndx ] = value > 0 ? value: 0
-            this.current_booker_ndx = (this.current_booker_ndx + 1) % 4
         }
+
+        this.current_booker_ndx = (this.current_booker_ndx + 1) % 4
     }
 
     book(value: Card) {
@@ -102,7 +102,7 @@ class Game {
 
     run() {
         // responsible for updating status and do the necessary acts and return the next action
-        if (this.isEnoughPlayers) {
+        if (!this.isEnoughPlayers) {
             this._status = GAME_STATUS.NOT_READY
         } else if ( this.isGameReady) {
             
@@ -248,7 +248,8 @@ class Game {
 
     public get isGameReady(): boolean {
         let isValidStatus: boolean = this._status === GAME_STATUS.NOT_READY || this._status === GAME_STATUS.ROUND_OVER
-        return this.isEnoughPlayers && this.arePlayersReady && isValidStatus
+
+        return this.isEnoughPlayers && isValidStatus
     }
 
     public get allBidReady() {
@@ -290,7 +291,7 @@ class Game {
             return false
     }
     public get dealerNdx(): number {
-        return (this.round_id + 1) % 4
+        return this.round_id % 4
     }
 
     public get currentPlayer(): Player {

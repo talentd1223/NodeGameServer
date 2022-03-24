@@ -280,6 +280,9 @@ class Game {
             return ret
         })
 
+        if (this.isBookStarted && cards[0]._suit === SUIT.SPADE) {
+            this.spade_broken = true
+        }
         return cards
     }
 

@@ -13,21 +13,19 @@ class Card {
         if (this._value === 1) {
             switch (this._suit) {
                 case SUIT.CLUB:
-                    this._suit = SUIT.SPADE
                     this._value = 17
                     break
                 case SUIT.HEART:
-                    this._suit = SUIT.SPADE
                     this._value = 16
                     break
                 case SUIT.DIAMOND:
-                    this._suit = SUIT.SPADE
                     this._value = is_diamond_trump ? 15 : 14
                     break
                 default:
                     this._value = is_diamond_trump ? 14 : 15
                     break
             }
+            this._suit = SUIT.SPADE
         }
         return this
     }

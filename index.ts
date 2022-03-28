@@ -60,6 +60,7 @@ function handleRunResult(result, game_id) {
 
 aedes.on('client', function (client) {
     if (client) {
+      console.log("client connected:  " + client.id )
       if (app.findPlayerById(client.id)) {
         return
       }
@@ -130,6 +131,21 @@ aedes.on('publish', async function (packet, client) {
     handleClientPublish(message, client.id, packet.topic.toString())
   }
 })
+
+aedes.on('clientDisconnect', async function (client) {
+  console.log(`Client ${client.id} disconnected` )
+  let game_id = app.removePlayer(client.id)
+  if (game_id) {
+    let response = {
+      topic: game_id,
+      payload: JSON.stringify(app.findGameById(game_id))
+    }
+    console.log(response)
+
+    aedes.publish( response as PublishPacket, () => {})
+  }
+})
+
 
 aedes.on('subscribe', async function (subscriptions, client) {
   if (client){

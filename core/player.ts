@@ -7,6 +7,7 @@ class Player {
     team_id: number
     team_name: string
     position_from_dealer: number
+    game_id: string
     // _seat_id: 0 | 1 | 2 | 3
     // _bid_amount: number
     // _tricks_taken: number
@@ -17,6 +18,7 @@ class Player {
         this._id = id
         this._name = id
         this._status = "lobby"
+        this.game_id = null
     }
 
     public removeCard(card: Card) {

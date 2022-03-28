@@ -35,7 +35,7 @@ class App {
     joinGame(game_id: string, player_id: string) {
         let game: Game = this.findGameById(game_id)
         let player: Player = this.findPlayerById(player_id)
-
+        player.game_id = game_id
         game.join(player)
         return game.run()
     }
@@ -58,11 +58,31 @@ class App {
         }
         return ret
     }
+    removePlayer(id: string) {
+        let player_ndx = this.findPlayerNdxById(id)
+        if (this.players[player_ndx].game_id) {
+            this.leaveGame(this.players[player_ndx].game_id, id)
+        }
+
+        this.players.splice(player_ndx, 1)
+        return this.players[player_ndx]?.game_id
+    }
 
     findPlayerById(id: string) {
         let filtered: Player[] = this.players.filter((player: Player) => player._id === id)
         return filtered.length ? filtered[0] : null
     }
+    findPlayerNdxById(id: string) {
+        let ndx = 0
+        for (let i = 0 ; i < this.players.length; i ++) {
+            if (this.players[i]._id === id) {
+                ndx = i
+                break
+            }
+        }
+        return ndx;
+    }
+
     findGameById(id: string) {
         let filtered: Game[] = this.games.filter((game: Game) => game._id === id)
         return filtered.length ? filtered[0] : null

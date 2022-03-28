@@ -61,8 +61,19 @@ class Game {
     }
 
     leave(player: Player) {
-        let player_ndx = (this.dealerNdx + player.position_from_dealer) % 4
+        let player_ndx = -1
+        for (let i = 0 ; i < this._players.length; i ++) {
+            if (this._players[i]._id === player._id) {
+                player_ndx = i
+                break
+            }
+        }
+        console.log("remove")
+        console.log(player_ndx)
+        if (player_ndx === -1) return false
+
         this._players.splice(player_ndx, 1)
+        return true
     }
 
     bid(value: number) {

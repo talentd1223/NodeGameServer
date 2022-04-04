@@ -12,15 +12,21 @@ class Game {
      *  
      *  READY // players all entered, start deal
      *  
-     *  ROUND_START // bid finished, shuffle card, distributed to each player
+     *  BLIND_BID // ask players if want to do blind bid
+     * 
+     *  BID // players bid
+     * 
+     *  BOOK <-> BOOK_OVER // players throw card on the table until no cards in hand
      *  
-     *  ROUND_PLAY // players throw card on the table until no cards in hand
+     *  ROUND_OVER // round over, start a new round or exit game
      *  
-     *  ROUND_OVER // check if game is over
-     *  
+     *  GAME_OVER // game over
      */
     _bids: number[]
 
+    noBags: boolean
+    noBlind: boolean
+    
     current_booker_ndx: number // position for the current booker id
     round_id: number // current round id
     round_scores: number[][][] // [[score, bags], [score, bags]] stands for record for individual rounds
@@ -47,6 +53,8 @@ class Game {
         this.spade_broken = false
         this.is_diamond_trump = true
         this.score_limit = 200
+        this.noBags = false
+        this.noBlind = false
     }
 
     join(player: Player) {
@@ -127,7 +135,7 @@ class Game {
 
                 this.deckShuffle()
 
-                if(this.someCanBlindBid) {
+                if(this.someCanBlindBid && !this.noBlind) {
                     this._status = GAME_STATUS.BLIND_BID
                     let bid_ndx = this.curBlindBidSeat
 
@@ -214,9 +222,9 @@ class Game {
     public get_round_result(team_id: 0 | 1) : number[]{
         let bids = this._bids[team_id] + this._bids[team_id + 2]
         let taken = this.books_taken[team_id] + this.books_taken[team_id + 2]
-
+        let bag = this.noBags? 0 : taken - bids
         if (taken >= bids) {
-            return [bids * 10 + taken - bids, taken - bids]
+            return [bids * 10 + bag, bag]
         } else {
             return [-bids * 10, 0]
         }

@@ -7,7 +7,7 @@ import Card from './core/card'
 
 const app = App.getInstance()
 const aedes = Aedes()
-const port = process.env.WS_PORT
+const port = 8888 //process.env.WS_PORT
 const httpServer = createServer(aedes, { ws: true })
 
 

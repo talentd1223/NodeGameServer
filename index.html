@@ -1,0 +1,466 @@
+<html>
+	<head>
+		<script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"> </script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.js" integrity="sha512-yX4jaiU9Ai9dzaimFoTq+tQYOrAMNP+EWiiUVsru3ypsAi76c0zCPBfxKagLkKjC4ZeLMEQTa7aE7CtjTmlgDA==" crossorigin="anonymous" referrerpolicy="no-referrer"> </script>
+	</head>
+	<body>
+		<div>
+			<h3>Server Address and Port</h3>
+			<input name="server_addr" id="server_addr" value="localhost"/>
+			<input name="server_port" id="server_port" value="8888"/>
+			<!-- <button onclick="handleConnect()" id="connect">Connect</button> -->
+		</div>
+
+		<div style="display: flex; flex-direction: row; margin-top: 5px;">
+			<input id="bid_amount" placeholder="bid amount"/>
+			<button onclick="place_bid()">BID</button>
+
+			<input id="robot" name="robot" type="checkbox" style="margin-left: 30px;"
+			onchange="handleRobot()"
+			/>
+			<label for="robot">Robot</label>
+		</div>
+		<div id="cards"></div>
+		<div id="bids">
+			<h3>Bids</h3></div>
+		<div id="books_taken">
+			<h3>Book Taken</h3></div>
+		<div>
+			<h3>Game Result</h3>
+			<div id="game_history"></div>
+		</div>
+
+		<div id="books">
+			<h3>Book</h3></div>
+
+		<div id="game"></div>
+		<script>
+			var values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', '', '2',, 'Trump', 'SJoker', 'BJoker']
+			// var suits = ['', '', '', '']
+			var suits = ['&#9824', '&#9829', '&#9827', '&#9830']
+
+			var available = []
+			var client;
+			var addr, port;
+			var game;
+			var userid;
+			var connected = false;
+			var bid_amount = -1;
+			var min_amount = 0;
+			var max_amount = 13;
+			var round_result = null
+			var bid_enabled = false
+			var bid_type = "blind"
+			var bid_status = "none"
+			var books = []
+			var options = {
+				keepalive: 60,
+				reconnectPeriod: 1000,
+			}
+			var is_robot = false
+			function handleRobot()
+			{
+				is_robot = document.getElementById("robot").checked
+			}
+
+			function robotBid(data)
+			{
+				let cards = []
+				cards = data.map(item => ({suit: parseInt(item.split('-')[0]), value: parseInt(item.split('-')[1])}))
+
+				let high_count = cards.filter(card => (
+				card.value >= 12 // Trump cards 14-17, K
+				|| card.value === 0 // ACE
+				|| card.value === 11 && card.suit === 0 // SPADE Q
+				)).length
+
+				let non_high_trump_count = 0
+				if (cards.filter(card => card.suit !== 0).length == 0) {
+					trump_count = cards.filter(card => (
+					card.value < 11 && card.value > 0
+					)).length
+				}
+
+				let weak_count = 0
+				let min_non_trump_count = 13
+				for (let i = 1; i < 4; i++) {
+					let suit_cnt = cards.filter( card => (
+					card.suit === i
+					)).length
+					min_non_trump_count = Math.min(min_non_trump_count, suit_cnt)
+				}
+				if (min_non_trump_count <= 2) {
+					let trump_cnt = cards.filter(card => card.suit == 0 && card.value < 11)
+					if (trump_cnt > 2) {
+						weak_count = 1
+					}
+				}
+
+				let useless_high_cards = 0
+				for (let i = 1; i < 4; i ++) {
+					let suit_cnt =  cards.filter( card => card.suit === i).length
+					if (suit_cnt >= 6) {
+						useless_high_cards += cards.filter( card => card.value === 0 || card.value === 12 ).length
+					}
+				}
+				return high_count + non_high_trump_count + weak_count - useless_high_cards
+			}
+			//first round, all users bid 0, no prompt necessary
+			function place_bid()
+			{
+				if (!bid_enabled)
+					return
+				let bid = Number($('#bid_amount').val())
+
+				if (bid_type === "blind") {
+
+					client.publish(game, `{"cmd": "blind_bid", "bid_amount": ${bid}, "id": "${userid}"}`)
+
+					if (bid === -1) {
+						// client.publish(game, `{"cmd": "card_open"}`)
+						bid_status = "none"
+					} else {
+						// client.publish(game, `{"cmd": "card_open"}`)
+
+						bid_status = "finished"
+					}
+					bid_enabled = false
+				} else if (bid < min_amount || bid > max_amount) {
+					alert("invalid bid amount. should be between " + min_amount + " and " + max_amount)
+				} else {
+					client.publish(game, `{"cmd": "bid", "bid_amount": ${$('#bid_amount').val()}, "id": "${userid}"}`)
+					bid_status = "finished"
+					bid_enabled = false
+				}
+				console.log(bid_status)
+			}
+			handleConnect()
+			function handleConnect()
+			{
+				connected = !connected
+				// if( !connected ) {
+				//     client.end()
+				//     $('#connect')[0].innerHTML = "connect"
+				//     return
+				// } else {
+				//     $('#connect')[0].innerHTML = "disconnect"
+				// }
+				addr = $("#server_addr").val()
+				port = $("#server_port").val()
+
+				const urlParams = new URLSearchParams(window.location.search);
+				userid = urlParams.get('id');
+				// pwd = $("#pwd").val()
+
+				client = mqtt.connect(`ws://${addr}:${port}/mqtt}`, {...options, clientId: userid, username: userid})
+
+				client.on('message', function (topic, message) {
+					// message is Buffer
+					topic = topic.toString()
+					message = message.toString()
+
+					console.log(message)
+					if (topic === 'games') {
+						// displayGames(message)
+						enterGame(message)
+					} else {
+						// display room info
+						console.log(message)
+						handlePayload(JSON.parse(message))
+					}
+				})
+
+				client.on('error', (err) => {
+					connected = false
+					alert('Error');
+					console.log('Connection error: ', err)
+				})
+			}
+
+			function robotBook(data)
+			{
+				let cards = data.map(item => ({suit: item._suit, value: item._value === 0 ? 13: item._value}))
+
+				cards.sort((card1, card2) => -cardCompare(card1, card2))
+				if (books.length === 3) {
+					let team_win = cardCompare(books[1], books[0], books[0].suit) === 1
+					team_win = team_win && cardCompare(books[1], books[2], books[0].suit) === 1
+
+					if ( team_win ) {
+						// lowest
+						return cards[cards.length - 1]
+					}
+				}
+
+				if (books.length !== 0) {
+					let len = books.length
+					let high_card = books[len - 1]
+
+					if (books[len - 3]) {
+						high_card = cardCompare(books[len - 1], books[len - 3], books[0].suit) === 1 ? books[len - 1] : books[len - 3]
+					}
+					if (cardCompare(cards[0], high_card) === 1) {
+						let ndx = 0
+						while (cards[ndx] && cardCompare(cards[ndx], high_card) === 1) {
+							ndx ++
+						}
+
+						if (ndx > 0)
+							return cards[ndx - 1]
+						else
+							return cards[cards.length - 1]
+					} else {
+						return cards[cards.length - 1]
+					}
+				}
+
+				let min_suit = new Array(cards.length)
+				if (cards[0].value < 11) {
+					for (let i = 1; i < 4; i++) {
+						let temp = cards.filter( card => (
+						card.suit === i
+						))
+						if ( temp.length === 0)
+							continue
+						if (temp.length < 2 && temp.length > 0) {
+							min_suit = temp
+						}
+
+						if (temp[0].value > 11) {
+							return temp[0]
+						}
+					}
+				}
+				if (min_suit.length != cards.length) {
+					return min_suit[0]
+				}
+				return cards[0]
+			}
+
+			function cardCompare(card1, card2, suit)
+			{
+				let card1_weight = card1.value === 0 ? 13: card1.value
+				let card2_weight = card2.value === 0 ? 13: card2.value
+
+				if (card1.suit === 0)
+					card1_weight += 20
+				else if (card1.suit != suit)
+					card1_weight -= 20
+
+				if (card2.suit === 0)
+					card2_weight += 20
+				else if (card2.suit != suit)
+					card2_weight -= 20
+
+				if (card1_weight > card2_weight)
+					return 1
+				else if (card1_weight < card2_weight)
+					return -1
+				else
+					return 0
+			}
+
+			function handlePayload(payload)
+			{
+				var content =""
+				switch (payload.cmd) {
+					case "deal":
+						// show deal animation
+						client.publish(game, '{"cmd": "bid_ready"}')
+						break;
+					case "blind_bid_req":
+						if (is_robot) {
+							client.publish(game, `{"cmd": "blind_bid", "bid_amount": -1, "id": "${userid}"}`)
+							return
+						}
+
+						bid_enabled = true
+						if (payload.bid_id === userid) {
+							max_amount = payload.max ? payload.max : max_amount
+							min_amount = payload.min ? payload.min : min_amount
+							alert("if you want blind bid, insert bid amount and just click bid button, if you don't want input -1 and click bid");
+							bid_type = "blind"
+						}
+						break;
+					case "bid_req":
+						bid_type = "normal"
+						displayCards(payload.cards)
+						if (is_robot) {
+							client.publish(game, `{"cmd": "bid", "bid_amount": ${robotBid(payload.cards)}, "id": "${userid}"}`)
+							return
+						}
+
+						bid_enabled = true
+
+						max_amount = payload.max ? payload.max : max_amount
+						min_amount = payload.min ? payload.min : min_amount
+
+						if (payload.bid_amount) {
+							place_bid(payload.bid_amount)
+						} else {
+							alert("input amount & click bid")
+						}
+						break;
+
+					case "book_req":
+						if (payload.book_taken) {
+							alert("books taken updated")
+							$('#books_taken')[0].innerHTML = "<h3>Book Taken</h3>" + payload.book_taken.join(',')
+
+							books = []
+						}
+						if (payload.booker_id === userid) {
+							available = payload.available
+
+							if (is_robot) {
+								let robot_card = robotBook(available)
+								robot_card.value = robot_card.value === 13 ? 0 : robot_card.value
+								handleCard(`${robot_card.suit}-${robot_card.value}`)
+								return
+							}
+							alert("your turn")
+							// setTimeout(
+							//     () => {
+							//         handleCard(`${available[0]._suit}-${available[0]._value}`)
+							//     }, 500
+							// )
+						}
+						break;
+					case "bid":
+					case "blind_bid":
+						if ($('#bids')[0].children.length === 5) {
+							$("#bids")[0].innerHTML = "<h3>Bids</h3>"
+						}
+
+						content = $("#bids")[0].innerHTML
+						content = `${content}<div>${payload.id}: ${payload.bid_amount}</div>`
+						console.log(content)
+						$("#bids")[0].innerHTML = content
+						break
+					case "book":
+						let card_val = Number(payload.card.split("-")[1])
+						let card = suits[Number(payload.card.split("-")[0])] + " " + values[card_val]
+
+						books.push({suit: Number(payload.card.split("-")[0]), value: card_val === 0 ? 13: card_val })
+						if (card_val === 17) {
+							card = 'BigJ'
+						} else if (card_val === 16) {
+							card = 'SmallJ'
+						} else if (card_val === 15) {
+							card = '&#9830 ' + 2
+						} else if (card_val === 14) {
+							card = '&#9824 ' + 2
+						}
+						if ($("#" + payload.booker).length) {
+							$("#" + payload.booker)[0].innerHTML = payload.booker + ": " + card
+						} else {
+							content = $("#books")[0].innerHTML
+							content = `${content}<div id='${payload.booker}'>${payload.booker}: ${card}</div>`
+							$("#books")[0].innerHTML = content
+						}
+						break;
+					case "round_result":
+						content = ""
+						for (let i = 0; i < payload.data.length; i++) {
+							content = `${content} <div><div>team 1-> score: ${payload.data[i][0][0]}, bag: ${payload.data[i][0][1]} </div>`
+							content = `${content} <div>team 2-> score: ${payload.data[i][1][0]}, bag: ${payload.data[i][1][1]} </div></div>`
+						}
+						$('#game_history')[0].innerHTML = content
+						client.publish(game, '{"cmd": "round_ready"}')
+						break
+					case "game_result":
+						content = ""
+						for (let i = 0; i < payload.data.length; i++) {
+							content = `${content} <div><div>team 1-> score: ${payload.data[i][0][0]}, bag: ${payload.data[i][0][1]} </div>`
+							content = `${content} <div>team 2-> score: ${payload.data[i][1][0]}, bag: ${payload.data[i][1][1]} </div></div>`
+						}
+						$('#game_history')[0].innerHTML = content
+						alert(`game over, ${payload.winner} win`)
+						leaveGame(game)
+						break
+
+					case "card_open":
+					case "bid_ready":
+					case "round_ready":
+						break;
+					default:
+						displayGameInfo(payload)
+						break
+				}
+			}
+
+			function displayGames(data)
+			{
+				let games = data.split(',')
+				let new_content = ""
+				for (let i = 0; i < games.length; i++) {
+					new_content= `${new_content}<button onclick="enterGame('${games[i]}')">${games[i]}</button>`
+				}
+
+				$("#room_list")[0].innerHTML = new_content
+			}
+
+			function displayCards(data)
+			{
+				let content = '<h3>cards in hand</h3><div>'
+				for (let i = 0; i < data.length; i++) {
+
+					let card_val = Number(data[i].split("-")[1])
+					let card = suits[Number(data[i].split("-")[0])] + " " + values[card_val]
+					if (card_val === 17) {
+						card = 'BigJ'
+					} else if (card_val === 16) {
+						card = 'SmallJ'
+					} else if (card_val === 15) {
+						card = '&#9830 ' + 2
+					} else if (card_val === 14) {
+						card = '&#9824 ' + 2
+					}
+
+					content = `${content}<button id='card-${data[i].trim()}'onClick='handleCard("${data[i].trim()}")''>${card}</button>`
+				}
+				content = content + "</div>"
+				$('#cards')[0].innerHTML = content
+			}
+
+			function handleCard(card)
+			{
+				let val = card.split('-')
+				if (available.find((item) => item._suit === Number(val[0]) && item._value===Number(val[1]))) {
+					client.publish(game, `{"cmd": "book", "card": "${card}", "booker": "${userid}"}`)
+
+					$(`#card-${card}`).remove()
+					available = []
+				}
+			}
+			function enterGame(game_id)
+			{
+				game = game_id
+				client.subscribe([game_id, game_id + '_' + userid])
+			}
+
+			function leaveGame(game_id)
+			{
+				game = null
+				client.unsubscribe(game_id)
+				client.unsubscribe(game_id + '_' + userid)
+				client.subscribe('games')
+				let gameZone = $('#game')[0]
+				gameZone.innerHTML = ''
+			}
+
+			function displayGameInfo(game)
+			{
+				let gameZone = $('#game')[0]
+				let content  = "<h3>players</h3>"
+				// let content  = `<h3>GAME NAME: ${game._id}<h3>`
+				for (let i = 0; i < game._players.length; i ++) {
+					content = ` ${content} <div>player: ${game._players[i]._id}<div>`
+				}
+
+				// content = `${content} <button onclick="leaveGame('${game._id}')">Leave Game</button>`
+				gameZone.innerHTML = content
+			}
+		</script>
+	</body>
+</html>
